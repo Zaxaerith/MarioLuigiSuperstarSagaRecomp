@@ -1,0 +1,13 @@
+# gbarecomp-keyinput-v1
+# frame,keyinput_active_low
+1200,0x03F7
+1220,0x03FF
+# wait for suitcase anim, then A for New Game
+1800,0x03FD
+1820,0x03FF
+2000,0x03FD
+2020,0x03FF
+2400,0x03FD
+2420,0x03FF
+2800,0x03FD
+2820,0x03FF

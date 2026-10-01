@@ -1,0 +1,69 @@
+# User-supplied secrets, ROM, BIOS, and save files
+*.gba
+*.GBA
+*.bin
+*.rom
+*.BIOS
+bios/
+saves/
+*.sav
+*.sa1
+*.fla
+
+# Build and generation outputs (ROM/BIOS-derived, local-only)
+build/
+build-*/
+generated/
+recomp_cache/
+.deps/
+*.lib
+*.a
+*.o
+*.obj
+*.exe
+*.dll
+*.pdb
+*.ilk
+*.exp
+
+# Upstream reference and research checkouts (never committed)
+reference/
+third_party/
+
+# Analysis, diagnostics, and coverage fragments
+recomp_coverage_*.json
+recomp_master_misses_*
+recomp_coverage*.json
+recomp_master_misses*
+
+# Debug logs, traces, and frame dumps
+logs/
+*.log
+*.tmp
+*.temp
+debug/
+traces/
+*.trace
+*.dump
+*.png
+*.bmp
+*.gif
+!docs/**/*.png
+
+# IDE and OS files
+.vs/
+.vscode/
+CMakeCache.txt
+CMakeFiles/
+cmake-build-*/
+out/
+__pycache__/
+*.user
+*.suo
+.DS_Store
+Thumbs.db
+
+# Internal agent instructions and private progress tracking
+AGENT_PROMPT.md
+docs/PROGRESS.md
+PROGRESS.md

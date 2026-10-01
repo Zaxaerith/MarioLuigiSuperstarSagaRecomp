@@ -1,0 +1,2954 @@
+# ---------------------------------------------------------------------------
+# Mario & Luigi: Superstar Saga (GBA, USA "A88E") — gbarecomp game configuration.
+#
+# Serves both sides of the pipeline (docs/TOML_SCHEMA.md in gbarecomp-main):
+#   * recompiler  (`gba_recompile --config game.toml`)
+#   * runtime     (`--config game.toml`)
+#
+# Identity values are measured from the verified local ROM and recorded in
+# docs/ROM_IDENTITY.json. HUMAN-REVIEWED ONLY: never auto-merge
+# recomp_master_misses_*.toml.frag proposals into this file.
+# ---------------------------------------------------------------------------
+
+[game]
+name = "Mario & Luigi: Superstar Saga"
+short_name = "mlss"
+
+[program]
+name = "Mario & Luigi: Superstar Saga (USA)"
+id = "A88E"
+load_address = 0x08000000
+size = 0x01000000          # 16 MiB (verified)
+entry_pc = 0x08000000      # cartridge reset vector; ARM branch 0xEA00002E -> 0x080000C0
+codegen_shards = 8
+# static_resume_all was true: every aligned instruction becomes an IRQ-resumable
+# dispatch entry. Combined with split Thumb BL pairs (0x0819A3C0/3C2) this
+# ballooned the shadow call-return stack to the 1024 cap during demo input
+# ("generated call-return stack overflow at return_pc=0x0819A3C4").
+# Try false until the BL-pair / mixed ARM-Thumb stub at sub_819A204 is clean.
+static_resume_all = false
+
+[identity]
+sha1 = "7c303cdde5061ee329296948060b875cb50ba410"
+md5 = "4b1a5897d89d9e74ec7f630eefdfd435"
+
+[rom]
+path = "Mario Luigi - Superstar Saga (USA).gba"
+sha1 = "7c303cdde5061ee329296948060b875cb50ba410"
+
+[bios]
+sha1 = "300c20df6731a33952ded8c436f7f186d25d3492"
+hle = false
+skip_intro = false
+
+[save]
+# Resolved from the first headless boot banner (logs/boot-smoke.log):
+#   rom_loaded ... save=EEPROM signature=EEPROM_V
+#   save_config source=game-config type=Flash 128KB (detected=EEPROM ...)
+# The cartridge ROM signature is authoritative for the save engine
+# Cartridge save type: EEPROM_V124 at 0x21DBA0. The decomp flash_internal.h
+# (1 Mbit MX29L010 API) is real source material but is NOT what this
+# cartridge image advertises. Size 8192 = 8 KB serial EEPROM (14-bit addr);
+# confirm write/readback on the first in-game save.
+type = "eeprom"
+size = 8192
+path = "saves/mlss_usa.sav"
+
+[runtime]
+window_title = "MarioLuigiSuperstarSagaRecomp"
+debug_port = 19856
+
+[video]
+screen = "raw"
+view_width = 240
+resize_view = false
+
+[audio]
+shadow = false
+
+# ---------------------------------------------------------------------------
+# Reviewed discovery metadata (2026-06-14). Sources:
+#   * logs/boot-900.log + recomp_coverage_A88E.json (runtime miss PCs)
+#   * third_party/mlss/asm/text08000000.s (CpuSet of the IRQ blob)
+# Never auto-merged from recomp_master_misses_A88E.toml.frag.
+# ---------------------------------------------------------------------------
+
+# ROM → IWRAM IRQ handler. Evidence (text08000000.s ~6152-6165):
+#   ldr r0, =0x0800010C
+#   ldr r4, =0x0300004C
+#   movs r2, #0xC0; lsls r2, r2, #1   → CpuSet control = 0x180
+#   bl CpuSet                          → 16-bit mode, 0x180 halfwords = 0x300 bytes
+#   str r4, [0x03007FFC]               → standard IRQ vector points at 0x0300004C
+# Source bytes live inside gf_afunc_080000F0; the same image is also executed
+# from IWRAM after the copy. code_copy only maps decode source — the runtime
+# entry still needs an [[extra_func]] (TOML_SCHEMA.md).
+[[code_copy]]
+runtime_start = 0x0300004C
+source_start  = 0x0800010C
+size          = 0x00000300
+name          = "iwram_irq_blob"
+note          = "CpuSet(0x0800010C → 0x0300004C, count=0x180). Measured as 16-bit CpuSet: 0x180 halfwords = 0x300 bytes. Do NOT expand without evidence — larger spans decode data as code and can hang."
+
+[[extra_func]]
+addr = 0x0300004C
+mode = "arm"
+name = "iwram_irq_main"
+note = "Runtime IRQ vector (0x03007FFC); ROM source 0x0800010C via code_copy"
+
+# Cart PCs the finder missed (runtime dispatch misses, 900-frame title boot).
+# Each sits just after a discovered neighbor — interior resume / split bodies.
+[[extra_func]]
+addr = 0x0801A434
+mode = "thumb"
+name = "tfunc_0801a434"
+note = "miss x82; near gf_tfunc_0801A3D6"
+
+[[extra_func]]
+addr = 0x08055668
+mode = "thumb"
+name = "tfunc_08055668"
+note = "miss x306; near gf_tfunc_080555A2"
+
+[[extra_func]]
+addr = 0x080562B4
+mode = "thumb"
+name = "tfunc_080562b4"
+note = "miss x217; near gf_tfunc_08056276"
+
+[[extra_func]]
+addr = 0x08057160
+mode = "thumb"
+name = "tfunc_08057160"
+note = "miss x217; near gf_tfunc_08056276"
+
+[[extra_func]]
+addr = 0x0805740C
+mode = "thumb"
+name = "tfunc_0805740c"
+note = "miss x305; near gf_tfunc_0805736E"
+
+# Switch-case clusters in gf_tfunc_0819A76A (title/file UI). Runtime flagged
+# two JT-candidate runs; ROM scan found the abs32 tables (thumb bit set).
+# Declaring the tables (not the per-case extra_func) keeps cases rolled into
+# their host and avoids a generated call-return stack overflow at 0x0819AA76.
+[[jump_table]]
+addr = 0x0821C98C
+stride = 4
+count = 7
+format = "abs32"
+entries_mode = "auto"
+name = "jt_0821c98c"
+note = "case targets 0x0819A79C/0x0819A7EC/0x0819A834/0x0819A8C0/0x0819A8D8"
+
+[[jump_table]]
+addr = 0x0821CAB0
+stride = 4
+count = 28
+format = "abs32"
+entries_mode = "auto"
+name = "jt_0821cab0"
+note = "case targets 0x0819AA38..0x0819ABF8 (8 unique, 28 slots)"
+
+# Remaining IWRAM dispatch misses (not yet backed by a code_copy):
+#   0x03001080 (arm) x1287
+#   0x0300111C (arm) x33
+#   0x0300117C (arm) x614
+# Likely a second ROM→IWRAM blob (possibly m4a SoundMainRAM). Open item.
+
+# REMOVED 2026-06-14: the 0x0819A4AC→0x03001080 code_copy caused
+# "dispatch into empty RAM" spin. Root cause (corrected): sub_819A43C
+# `swi #0x11` is LZ77UnCompWram (decompress), NOT CpuFastSet. Source
+# bytes at 0x0819A4AC are LZ77 (`0x10` header); IWRAM 0x03001080 holds
+# the *decompressed* ARM image (not verbatim ROM). code_copy cannot map
+# that. Leave those PCs on the interpreter bridge until a decompressed
+# image strategy exists.
+#
+# Proven verbatim IWRAM copies (GBARECOMP_IWRAM_DUMP + match_iwram.py,
+# 900-frame title boot). Declared below.
+
+[[code_copy]]
+runtime_start = 0x03001BE8
+source_start  = 0x08198220
+size          = 0x000002E4
+name          = "iwram_blob_1be8"
+note          = "verbatim match 0x03001BE8<-0x08198220 size 0x2E4; covers miss 0x03001CF4"
+
+[[code_copy]]
+runtime_start = 0x03001EDC
+source_start  = 0x081980D8
+size          = 0x00000148
+name          = "iwram_blob_1edc"
+note          = "verbatim match 0x03001EDC<-0x081980D8 size 0x148"
+
+[[code_copy]]
+runtime_start = 0x030023D8
+source_start  = 0x08000850
+size          = 0x000000C4
+name          = "iwram_blob_23d8"
+note          = "verbatim match 0x030023D8<-0x08000850 size 0xC4; covers 0x03002440/0x03002478"
+
+
+[[extra_func]]
+addr = 0x03001BE8
+mode = "arm"
+name = "iwram_1be8"
+note = "blob entry; covers 0x03001CF4 miss"
+
+[[extra_func]]
+addr = 0x03001CF4
+mode = "arm"
+name = "iwram_1cf4"
+note = "miss inside iwram_blob_1be8"
+
+[[extra_func]]
+addr = 0x03001D04
+mode = "arm"
+name = "iwram_1d04"
+note = "miss inside iwram_blob_1be8 (surfaced after 1cf4)"
+
+[[extra_func]]
+addr = 0x03001EDC
+mode = "arm"
+name = "iwram_1edc"
+note = "blob entry"
+
+[[extra_func]]
+addr = 0x03001F0C
+mode = "arm"
+name = "iwram_1f0c"
+note = "miss near 0x03001F40/44; inside iwram_blob_1edc"
+
+[[extra_func]]
+addr = 0x03001F40
+mode = "arm"
+name = "iwram_1f40"
+note = "miss inside iwram_blob_1edc"
+
+[[extra_func]]
+addr = 0x03001F44
+mode = "arm"
+name = "iwram_1f44"
+note = "miss inside iwram_blob_1edc"
+
+[[extra_func]]
+addr = 0x030023D8
+mode = "arm"
+name = "iwram_23d8"
+note = "blob entry; covers 0x03002440/0x03002478"
+
+[[extra_func]]
+addr = 0x03002440
+mode = "arm"
+name = "iwram_2440"
+note = "miss inside iwram_blob_23d8"
+
+[[extra_func]]
+addr = 0x03002478
+mode = "arm"
+name = "iwram_2478"
+note = "miss inside iwram_blob_23d8"
+
+[[extra_func]]
+addr = 0x08000850
+mode = "arm"
+name = "blob_08000850"
+note = "sprite sort routine (ROM backing of 0x03000D48)"
+
+[[extra_func]]
+addr = 0x080008B8
+mode = "arm"
+name = "blob_080008b8"
+note = "OAM copy routine (ROM backing of 0x03000D4C)"
+
+[[extra_func]]
+addr = 0x080008F0
+mode = "arm"
+name = "blob_080008f0"
+note = "sprite clear routine (ROM backing of 0x03000D50)"
+
+[[resume_range]]
+start = 0x08000850
+end   = 0x080008B8
+mode  = "arm"
+note  = "blob_08000850 IRQ resume"
+
+[[resume_range]]
+start = 0x080008B8
+end   = 0x080008F0
+mode  = "arm"
+note  = "blob_080008b8 IRQ resume"
+
+[[resume_range]]
+start = 0x080008F0
+end   = 0x08000914
+mode  = "arm"
+note  = "blob_080008f0 IRQ resume"
+
+# MLSS graphics decompressor (ROM 0x08000534 / 0x08000540):
+# Implemented as native C++ routine in runtime_bus_bridge.cpp (native_mlss_decompress)
+# to avoid GBA stack recursion when unpacking large graphics.
+[[exclude_func]]
+addr = 0x08000534
+reason = "native C++ decompressor implementation in runtime_bus_bridge.cpp"
+
+[[exclude_func]]
+addr = 0x08000540
+reason = "native C++ decompressor implementation in runtime_bus_bridge.cpp"
+
+# ---------------------------------------------------------------------------
+# Function-boundary fix (call-return stack overflow).
+#
+# sub_819A204 = Thumb stub + `bx pc` + inline ARM body (`bx lr` at 0x0819A234)
+# then DATA. A second Thumb body at 0x0819A3BA does `bl sub_819A204` and
+# continues at 0x0819A3C4. A too-wide resume_range (0x0819A204..0x0819B204)
+# merged callee and caller into ONE host, turning that `bl` into self-recursion
+# → "generated call-return stack overflow at return_pc=0x0819A3C4".
+#
+# Keep callee and caller separate; only roll each body's interior labels.
+# Workaround: keep the Thumb BL pair at 0x0819A3C0/3C2 out of static codegen.
+# The emitter splits it into two 16-bit ops and call-return-stack-overflows
+# ("overflow at return_pc=0x0819A3C4"). Runtime interpreter-bridges this body
+# instead (interpreter handles BL pairs correctly).
+# Note: resume_range may not contain exclude_func — so no resume_range here.
+[[exclude_func]]
+addr = 0x0819A3BA
+reason = "Thumb BL pair 0x0819A3C0/3C2 mis-lowered as bl.hi+bl.lo; interpreter bridge until framework fix"
+
+[[exclude_func]]
+addr = 0x0819A3C0
+reason = "BL halfword pair start; see 0x0819A3BA"
+
+# Shared return stub (add sp,#0x40; pop; pop {r0}; bx r0). Reached by
+# `bl` from 0x08125510 (range-check fail path of sub_81254FC) and by the
+# switch table. Must be a static host so self-heal does not spin in it.
+[[extra_func]]
+addr = 0x08126504
+mode = "thumb"
+name = "shared_epilogue_08126504"
+note = "shared tail-return stub; pop {r0}; bx r0 — returns to original stacked LR"
+
+# Input-advance seeds (2200-frame Start/A run). Self-heal bridge hung at
+# 0x08125694; the 0x0801Fxxx cluster is the file/menu process code near
+# gf_tfunc_0801EE80.
+[[extra_func]]
+addr = 0x08125694
+mode = "thumb"
+name = "tfunc_08125694"
+note = "self-heal bridge spin site (movs r0,#4); input-advance"
+
+[[extra_func]]
+addr = 0x08122A14
+mode = "thumb"
+name = "tfunc_08122a14"
+note = "self-heal bridge spin site after 0x08125694; input-advance"
+
+[[extra_func]]
+addr = 0x0801F712
+mode = "thumb"
+name = "tfunc_0801f712"
+note = "miss in file/menu process cluster"
+
+[[extra_func]]
+addr = 0x0801F77C
+mode = "thumb"
+name = "tfunc_0801f77c"
+
+[[extra_func]]
+addr = 0x0801F780
+mode = "thumb"
+name = "tfunc_0801f780"
+
+[[extra_func]]
+addr = 0x0801F79A
+mode = "thumb"
+name = "tfunc_0801f79a"
+
+[[extra_func]]
+addr = 0x0801F7A4
+mode = "thumb"
+name = "tfunc_0801f7a4"
+
+[[extra_func]]
+addr = 0x0801F7B8
+mode = "thumb"
+name = "tfunc_0801f7b8"
+
+[[extra_func]]
+addr = 0x0801F8D6
+mode = "thumb"
+name = "tfunc_0801f8d6"
+
+[[extra_func]]
+addr = 0x0801F8E8
+mode = "thumb"
+name = "tfunc_0801f8e8"
+
+[[extra_func]]
+addr = 0x0801F928
+mode = "thumb"
+name = "tfunc_0801f928"
+
+[[extra_func]]
+addr = 0x0801F934
+mode = "thumb"
+name = "tfunc_0801f934"
+
+[[extra_func]]
+addr = 0x0801F99A
+mode = "thumb"
+name = "tfunc_0801f99a"
+
+[[extra_func]]
+addr = 0x0801F9F4
+mode = "thumb"
+name = "tfunc_0801f9f4"
+
+[[extra_func]]
+addr = 0x0801FA0E
+mode = "thumb"
+name = "tfunc_0801fa0e"
+
+[[extra_func]]
+addr = 0x0801FA22
+mode = "thumb"
+name = "tfunc_0801fa22"
+
+[[extra_func]]
+addr = 0x080206A4
+mode = "thumb"
+name = "tfunc_080206a4"
+
+[[extra_func]]
+addr = 0x08020710
+mode = "thumb"
+name = "tfunc_08020710"
+
+[[extra_func]]
+addr = 0x0819AE0A
+mode = "thumb"
+resume = true
+name = "resume_0819ae0a"
+note = "overflow site 2; interior after autojt_0819AD04_03"
+
+# LZ77-decompressed (NOT verbatim) — interpreter bridge only for now:
+#   0x03001080 / 0x0300111C / 0x0300117C  (src LZ77 @ 0x0819A4AC via swi #0x11)
+
+# ---- 0x08122000-0x08127000 Thumb prologues (input-advance cluster) ----
+
+[[extra_func]]
+addr = 0x08122098
+mode = "thumb"
+name = "tfunc_8122098"
+
+[[extra_func]]
+addr = 0x08122198
+mode = "thumb"
+name = "tfunc_8122198"
+
+[[extra_func]]
+addr = 0x08122248
+mode = "thumb"
+name = "tfunc_8122248"
+
+[[extra_func]]
+addr = 0x08122330
+mode = "thumb"
+name = "tfunc_8122330"
+
+[[extra_func]]
+addr = 0x08122618
+mode = "thumb"
+name = "tfunc_8122618"
+
+[[extra_func]]
+addr = 0x0812290C
+mode = "thumb"
+name = "tfunc_812290c"
+
+[[extra_func]]
+addr = 0x081229F0
+mode = "thumb"
+name = "tfunc_81229f0"
+
+[[extra_func]]
+addr = 0x08122A20
+mode = "thumb"
+name = "tfunc_8122a20"
+
+[[extra_func]]
+addr = 0x08122AFC
+mode = "thumb"
+name = "tfunc_8122afc"
+
+[[extra_func]]
+addr = 0x08122BA0
+mode = "thumb"
+name = "tfunc_8122ba0"
+
+[[extra_func]]
+addr = 0x08122BFC
+mode = "thumb"
+name = "tfunc_8122bfc"
+
+[[extra_func]]
+addr = 0x08122E30
+mode = "thumb"
+name = "tfunc_8122e30"
+
+[[extra_func]]
+addr = 0x081230D0
+mode = "thumb"
+name = "tfunc_81230d0"
+
+[[extra_func]]
+addr = 0x081232C4
+mode = "thumb"
+name = "tfunc_81232c4"
+
+[[extra_func]]
+addr = 0x08123340
+mode = "thumb"
+name = "tfunc_8123340"
+
+[[extra_func]]
+addr = 0x0812335C
+mode = "thumb"
+name = "tfunc_812335c"
+
+[[extra_func]]
+addr = 0x081233B4
+mode = "thumb"
+name = "tfunc_81233b4"
+
+[[extra_func]]
+addr = 0x0812378C
+mode = "thumb"
+name = "tfunc_812378c"
+
+[[extra_func]]
+addr = 0x08123BA8
+mode = "thumb"
+name = "tfunc_8123ba8"
+
+[[extra_func]]
+addr = 0x08123DC4
+mode = "thumb"
+name = "tfunc_8123dc4"
+
+[[extra_func]]
+addr = 0x0812418C
+mode = "thumb"
+name = "tfunc_812418c"
+
+[[extra_func]]
+addr = 0x08124270
+mode = "thumb"
+name = "tfunc_8124270"
+
+[[extra_func]]
+addr = 0x0812454C
+mode = "thumb"
+name = "tfunc_812454c"
+
+[[extra_func]]
+addr = 0x08124740
+mode = "thumb"
+name = "tfunc_8124740"
+
+[[extra_func]]
+addr = 0x08124978
+mode = "thumb"
+name = "tfunc_8124978"
+
+[[extra_func]]
+addr = 0x08124C44
+mode = "thumb"
+name = "tfunc_8124c44"
+
+[[extra_func]]
+addr = 0x08124D84
+mode = "thumb"
+name = "tfunc_8124d84"
+
+[[extra_func]]
+addr = 0x08124E9C
+mode = "thumb"
+name = "tfunc_8124e9c"
+
+[[extra_func]]
+addr = 0x08125000
+mode = "thumb"
+name = "tfunc_8125000"
+
+[[extra_func]]
+addr = 0x081251F0
+mode = "thumb"
+name = "tfunc_81251f0"
+
+[[extra_func]]
+addr = 0x08125220
+mode = "thumb"
+name = "tfunc_8125220"
+
+[[extra_func]]
+addr = 0x0812525C
+mode = "thumb"
+name = "tfunc_812525c"
+
+[[extra_func]]
+addr = 0x081252BC
+mode = "thumb"
+name = "tfunc_81252bc"
+
+[[extra_func]]
+addr = 0x08125324
+mode = "thumb"
+name = "tfunc_8125324"
+
+[[extra_func]]
+addr = 0x0812538C
+mode = "thumb"
+name = "tfunc_812538c"
+
+[[extra_func]]
+addr = 0x08125464
+mode = "thumb"
+name = "tfunc_8125464"
+
+[[extra_func]]
+addr = 0x081254FC
+mode = "thumb"
+name = "tfunc_81254fc"
+
+[[extra_func]]
+addr = 0x08126520
+mode = "thumb"
+name = "tfunc_8126520"
+
+[[extra_func]]
+addr = 0x08126C3C
+mode = "thumb"
+name = "tfunc_8126c3c"
+
+
+# interior spin / case labels inside the jump-table bodies
+[[extra_func]]
+addr = 0x08125614
+mode = "thumb"
+name = "tfunc_08125614"
+note = "spin site; interior of sub_81254FC jump table"
+
+[[extra_func]]
+addr = 0x08122A14
+mode = "thumb"
+name = "tfunc_08122a14b"
+note = "spin site near sub_81229F0"
+
+# ---- 0x08110000-0x08118000 Thumb prologues ----
+
+[[extra_func]]
+addr = 0x08110034
+mode = "thumb"
+name = "tfunc_8110034"
+
+[[extra_func]]
+addr = 0x08110078
+mode = "thumb"
+name = "tfunc_8110078"
+
+[[extra_func]]
+addr = 0x081100B0
+mode = "thumb"
+name = "tfunc_81100b0"
+
+[[extra_func]]
+addr = 0x08110134
+mode = "thumb"
+name = "tfunc_8110134"
+
+[[extra_func]]
+addr = 0x08110178
+mode = "thumb"
+name = "tfunc_8110178"
+
+[[extra_func]]
+addr = 0x081101BC
+mode = "thumb"
+name = "tfunc_81101bc"
+
+[[extra_func]]
+addr = 0x081102A0
+mode = "thumb"
+name = "tfunc_81102a0"
+
+[[extra_func]]
+addr = 0x08110374
+mode = "thumb"
+name = "tfunc_8110374"
+
+[[extra_func]]
+addr = 0x081104AC
+mode = "thumb"
+name = "tfunc_81104ac"
+
+[[extra_func]]
+addr = 0x08110620
+mode = "thumb"
+name = "tfunc_8110620"
+
+[[extra_func]]
+addr = 0x081106D4
+mode = "thumb"
+name = "tfunc_81106d4"
+
+[[extra_func]]
+addr = 0x081107CC
+mode = "thumb"
+name = "tfunc_81107cc"
+
+[[extra_func]]
+addr = 0x08110874
+mode = "thumb"
+name = "tfunc_8110874"
+
+[[extra_func]]
+addr = 0x0811090C
+mode = "thumb"
+name = "tfunc_811090c"
+
+[[extra_func]]
+addr = 0x08110948
+mode = "thumb"
+name = "tfunc_8110948"
+
+[[extra_func]]
+addr = 0x08110988
+mode = "thumb"
+name = "tfunc_8110988"
+
+[[extra_func]]
+addr = 0x081109D0
+mode = "thumb"
+name = "tfunc_81109d0"
+
+[[extra_func]]
+addr = 0x081109F4
+mode = "thumb"
+name = "tfunc_81109f4"
+
+[[extra_func]]
+addr = 0x08110A30
+mode = "thumb"
+name = "tfunc_8110a30"
+
+[[extra_func]]
+addr = 0x08110A94
+mode = "thumb"
+name = "tfunc_8110a94"
+
+[[extra_func]]
+addr = 0x08110B04
+mode = "thumb"
+name = "tfunc_8110b04"
+
+[[extra_func]]
+addr = 0x08110B3C
+mode = "thumb"
+name = "tfunc_8110b3c"
+
+[[extra_func]]
+addr = 0x08110B84
+mode = "thumb"
+name = "tfunc_8110b84"
+
+[[extra_func]]
+addr = 0x08110BF8
+mode = "thumb"
+name = "tfunc_8110bf8"
+
+[[extra_func]]
+addr = 0x08110C88
+mode = "thumb"
+name = "tfunc_8110c88"
+
+[[extra_func]]
+addr = 0x08110CB0
+mode = "thumb"
+name = "tfunc_8110cb0"
+
+[[extra_func]]
+addr = 0x08110E30
+mode = "thumb"
+name = "tfunc_8110e30"
+
+[[extra_func]]
+addr = 0x08110ED8
+mode = "thumb"
+name = "tfunc_8110ed8"
+
+[[extra_func]]
+addr = 0x08110F5C
+mode = "thumb"
+name = "tfunc_8110f5c"
+
+[[extra_func]]
+addr = 0x08110FA4
+mode = "thumb"
+name = "tfunc_8110fa4"
+
+[[extra_func]]
+addr = 0x08110FC8
+mode = "thumb"
+name = "tfunc_8110fc8"
+
+[[extra_func]]
+addr = 0x0811104C
+mode = "thumb"
+name = "tfunc_811104c"
+
+[[extra_func]]
+addr = 0x0811108C
+mode = "thumb"
+name = "tfunc_811108c"
+
+[[extra_func]]
+addr = 0x081110B4
+mode = "thumb"
+name = "tfunc_81110b4"
+
+[[extra_func]]
+addr = 0x08111100
+mode = "thumb"
+name = "tfunc_8111100"
+
+[[extra_func]]
+addr = 0x08111174
+mode = "thumb"
+name = "tfunc_8111174"
+
+[[extra_func]]
+addr = 0x081111C0
+mode = "thumb"
+name = "tfunc_81111c0"
+
+[[extra_func]]
+addr = 0x08111214
+mode = "thumb"
+name = "tfunc_8111214"
+
+[[extra_func]]
+addr = 0x08111234
+mode = "thumb"
+name = "tfunc_8111234"
+
+[[extra_func]]
+addr = 0x081112C4
+mode = "thumb"
+name = "tfunc_81112c4"
+
+[[extra_func]]
+addr = 0x08111344
+mode = "thumb"
+name = "tfunc_8111344"
+
+[[extra_func]]
+addr = 0x0811152C
+mode = "thumb"
+name = "tfunc_811152c"
+
+[[extra_func]]
+addr = 0x0811160C
+mode = "thumb"
+name = "tfunc_811160c"
+
+[[extra_func]]
+addr = 0x081116C0
+mode = "thumb"
+name = "tfunc_81116c0"
+
+[[extra_func]]
+addr = 0x08111754
+mode = "thumb"
+name = "tfunc_8111754"
+
+[[extra_func]]
+addr = 0x08111848
+mode = "thumb"
+name = "tfunc_8111848"
+
+[[extra_func]]
+addr = 0x081118F0
+mode = "thumb"
+name = "tfunc_81118f0"
+
+[[extra_func]]
+addr = 0x081119DC
+mode = "thumb"
+name = "tfunc_81119dc"
+
+[[extra_func]]
+addr = 0x08111A88
+mode = "thumb"
+name = "tfunc_8111a88"
+
+[[extra_func]]
+addr = 0x08111B38
+mode = "thumb"
+name = "tfunc_8111b38"
+
+[[extra_func]]
+addr = 0x08111C24
+mode = "thumb"
+name = "tfunc_8111c24"
+
+[[extra_func]]
+addr = 0x08111CA8
+mode = "thumb"
+name = "tfunc_8111ca8"
+
+[[extra_func]]
+addr = 0x08111D0C
+mode = "thumb"
+name = "tfunc_8111d0c"
+
+[[extra_func]]
+addr = 0x08111E30
+mode = "thumb"
+name = "tfunc_8111e30"
+
+[[extra_func]]
+addr = 0x08111F3C
+mode = "thumb"
+name = "tfunc_8111f3c"
+
+[[extra_func]]
+addr = 0x08112030
+mode = "thumb"
+name = "tfunc_8112030"
+
+[[extra_func]]
+addr = 0x08112064
+mode = "thumb"
+name = "tfunc_8112064"
+
+[[extra_func]]
+addr = 0x0811208C
+mode = "thumb"
+name = "tfunc_811208c"
+
+[[extra_func]]
+addr = 0x081120E4
+mode = "thumb"
+name = "tfunc_81120e4"
+
+[[extra_func]]
+addr = 0x0811213C
+mode = "thumb"
+name = "tfunc_811213c"
+
+[[extra_func]]
+addr = 0x08112174
+mode = "thumb"
+name = "tfunc_8112174"
+
+[[extra_func]]
+addr = 0x081121E8
+mode = "thumb"
+name = "tfunc_81121e8"
+
+[[extra_func]]
+addr = 0x08112268
+mode = "thumb"
+name = "tfunc_8112268"
+
+[[extra_func]]
+addr = 0x081122D0
+mode = "thumb"
+name = "tfunc_81122d0"
+
+[[extra_func]]
+addr = 0x0811230C
+mode = "thumb"
+name = "tfunc_811230c"
+
+[[extra_func]]
+addr = 0x08112350
+mode = "thumb"
+name = "tfunc_8112350"
+
+[[extra_func]]
+addr = 0x08112394
+mode = "thumb"
+name = "tfunc_8112394"
+
+[[extra_func]]
+addr = 0x081123B4
+mode = "thumb"
+name = "tfunc_81123b4"
+
+[[extra_func]]
+addr = 0x08112450
+mode = "thumb"
+name = "tfunc_8112450"
+
+[[extra_func]]
+addr = 0x08112498
+mode = "thumb"
+name = "tfunc_8112498"
+
+[[extra_func]]
+addr = 0x081124D0
+mode = "thumb"
+name = "tfunc_81124d0"
+
+[[extra_func]]
+addr = 0x0811251C
+mode = "thumb"
+name = "tfunc_811251c"
+
+[[extra_func]]
+addr = 0x0811254C
+mode = "thumb"
+name = "tfunc_811254c"
+
+[[extra_func]]
+addr = 0x08112578
+mode = "thumb"
+name = "tfunc_8112578"
+
+[[extra_func]]
+addr = 0x081125CC
+mode = "thumb"
+name = "tfunc_81125cc"
+
+[[extra_func]]
+addr = 0x08112630
+mode = "thumb"
+name = "tfunc_8112630"
+
+[[extra_func]]
+addr = 0x081126BC
+mode = "thumb"
+name = "tfunc_81126bc"
+
+[[extra_func]]
+addr = 0x081126E4
+mode = "thumb"
+name = "tfunc_81126e4"
+
+[[extra_func]]
+addr = 0x08112740
+mode = "thumb"
+name = "tfunc_8112740"
+
+[[extra_func]]
+addr = 0x081127B8
+mode = "thumb"
+name = "tfunc_81127b8"
+
+[[extra_func]]
+addr = 0x081127FC
+mode = "thumb"
+name = "tfunc_81127fc"
+
+[[extra_func]]
+addr = 0x08112840
+mode = "thumb"
+name = "tfunc_8112840"
+
+[[extra_func]]
+addr = 0x08112870
+mode = "thumb"
+name = "tfunc_8112870"
+
+[[extra_func]]
+addr = 0x08112898
+mode = "thumb"
+name = "tfunc_8112898"
+
+[[extra_func]]
+addr = 0x08112904
+mode = "thumb"
+name = "tfunc_8112904"
+
+[[extra_func]]
+addr = 0x08112984
+mode = "thumb"
+name = "tfunc_8112984"
+
+[[extra_func]]
+addr = 0x081129B4
+mode = "thumb"
+name = "tfunc_81129b4"
+
+[[extra_func]]
+addr = 0x08112A24
+mode = "thumb"
+name = "tfunc_8112a24"
+
+[[extra_func]]
+addr = 0x08112B0C
+mode = "thumb"
+name = "tfunc_8112b0c"
+
+[[extra_func]]
+addr = 0x08112BBC
+mode = "thumb"
+name = "tfunc_8112bbc"
+
+[[extra_func]]
+addr = 0x08112C50
+mode = "thumb"
+name = "tfunc_8112c50"
+
+[[extra_func]]
+addr = 0x08112CE4
+mode = "thumb"
+name = "tfunc_8112ce4"
+
+[[extra_func]]
+addr = 0x08112D78
+mode = "thumb"
+name = "tfunc_8112d78"
+
+[[extra_func]]
+addr = 0x08112E40
+mode = "thumb"
+name = "tfunc_8112e40"
+
+[[extra_func]]
+addr = 0x08112F40
+mode = "thumb"
+name = "tfunc_8112f40"
+
+[[extra_func]]
+addr = 0x08112FFC
+mode = "thumb"
+name = "tfunc_8112ffc"
+
+[[extra_func]]
+addr = 0x0811308C
+mode = "thumb"
+name = "tfunc_811308c"
+
+[[extra_func]]
+addr = 0x0811313C
+mode = "thumb"
+name = "tfunc_811313c"
+
+[[extra_func]]
+addr = 0x081132AC
+mode = "thumb"
+name = "tfunc_81132ac"
+
+[[extra_func]]
+addr = 0x081132D4
+mode = "thumb"
+name = "tfunc_81132d4"
+
+[[extra_func]]
+addr = 0x08113314
+mode = "thumb"
+name = "tfunc_8113314"
+
+[[extra_func]]
+addr = 0x08113384
+mode = "thumb"
+name = "tfunc_8113384"
+
+[[extra_func]]
+addr = 0x08113420
+mode = "thumb"
+name = "tfunc_8113420"
+
+[[extra_func]]
+addr = 0x08113458
+mode = "thumb"
+name = "tfunc_8113458"
+
+[[extra_func]]
+addr = 0x081134A8
+mode = "thumb"
+name = "tfunc_81134a8"
+
+[[extra_func]]
+addr = 0x081135C0
+mode = "thumb"
+name = "tfunc_81135c0"
+
+[[extra_func]]
+addr = 0x08113674
+mode = "thumb"
+name = "tfunc_8113674"
+
+[[extra_func]]
+addr = 0x08113708
+mode = "thumb"
+name = "tfunc_8113708"
+
+[[extra_func]]
+addr = 0x081138B0
+mode = "thumb"
+name = "tfunc_81138b0"
+
+[[extra_func]]
+addr = 0x08113A54
+mode = "thumb"
+name = "tfunc_8113a54"
+
+[[extra_func]]
+addr = 0x08113AE0
+mode = "thumb"
+name = "tfunc_8113ae0"
+
+[[extra_func]]
+addr = 0x08113BA4
+mode = "thumb"
+name = "tfunc_8113ba4"
+
+[[extra_func]]
+addr = 0x08113CD4
+mode = "thumb"
+name = "tfunc_8113cd4"
+
+[[extra_func]]
+addr = 0x08113DC0
+mode = "thumb"
+name = "tfunc_8113dc0"
+
+[[extra_func]]
+addr = 0x08113E20
+mode = "thumb"
+name = "tfunc_8113e20"
+
+[[extra_func]]
+addr = 0x08113E44
+mode = "thumb"
+name = "tfunc_8113e44"
+
+[[extra_func]]
+addr = 0x08113E78
+mode = "thumb"
+name = "tfunc_8113e78"
+
+[[extra_func]]
+addr = 0x08113EA0
+mode = "thumb"
+name = "tfunc_8113ea0"
+
+[[extra_func]]
+addr = 0x08113F30
+mode = "thumb"
+name = "tfunc_8113f30"
+
+[[extra_func]]
+addr = 0x08113FB4
+mode = "thumb"
+name = "tfunc_8113fb4"
+
+[[extra_func]]
+addr = 0x0811403C
+mode = "thumb"
+name = "tfunc_811403c"
+
+[[extra_func]]
+addr = 0x081140C0
+mode = "thumb"
+name = "tfunc_81140c0"
+
+[[extra_func]]
+addr = 0x08114110
+mode = "thumb"
+name = "tfunc_8114110"
+
+[[extra_func]]
+addr = 0x0811416C
+mode = "thumb"
+name = "tfunc_811416c"
+
+[[extra_func]]
+addr = 0x081141F8
+mode = "thumb"
+name = "tfunc_81141f8"
+
+[[extra_func]]
+addr = 0x08114278
+mode = "thumb"
+name = "tfunc_8114278"
+
+[[extra_func]]
+addr = 0x081142FC
+mode = "thumb"
+name = "tfunc_81142fc"
+
+[[extra_func]]
+addr = 0x08114380
+mode = "thumb"
+name = "tfunc_8114380"
+
+[[extra_func]]
+addr = 0x08114404
+mode = "thumb"
+name = "tfunc_8114404"
+
+[[extra_func]]
+addr = 0x0811448C
+mode = "thumb"
+name = "tfunc_811448c"
+
+[[extra_func]]
+addr = 0x081144CC
+mode = "thumb"
+name = "tfunc_81144cc"
+
+[[extra_func]]
+addr = 0x08114528
+mode = "thumb"
+name = "tfunc_8114528"
+
+[[extra_func]]
+addr = 0x08114558
+mode = "thumb"
+name = "tfunc_8114558"
+
+[[extra_func]]
+addr = 0x0811458C
+mode = "thumb"
+name = "tfunc_811458c"
+
+[[extra_func]]
+addr = 0x081145C8
+mode = "thumb"
+name = "tfunc_81145c8"
+
+[[extra_func]]
+addr = 0x081145F8
+mode = "thumb"
+name = "tfunc_81145f8"
+
+[[extra_func]]
+addr = 0x08114680
+mode = "thumb"
+name = "tfunc_8114680"
+
+[[extra_func]]
+addr = 0x081146DC
+mode = "thumb"
+name = "tfunc_81146dc"
+
+[[extra_func]]
+addr = 0x08114760
+mode = "thumb"
+name = "tfunc_8114760"
+
+[[extra_func]]
+addr = 0x08114790
+mode = "thumb"
+name = "tfunc_8114790"
+
+[[extra_func]]
+addr = 0x081147B4
+mode = "thumb"
+name = "tfunc_81147b4"
+
+[[extra_func]]
+addr = 0x081147D0
+mode = "thumb"
+name = "tfunc_81147d0"
+
+[[extra_func]]
+addr = 0x08114854
+mode = "thumb"
+name = "tfunc_8114854"
+
+[[extra_func]]
+addr = 0x0811488C
+mode = "thumb"
+name = "tfunc_811488c"
+
+[[extra_func]]
+addr = 0x081148B8
+mode = "thumb"
+name = "tfunc_81148b8"
+
+[[extra_func]]
+addr = 0x08114A84
+mode = "thumb"
+name = "tfunc_8114a84"
+
+[[extra_func]]
+addr = 0x08114AB8
+mode = "thumb"
+name = "tfunc_8114ab8"
+
+[[extra_func]]
+addr = 0x08114B30
+mode = "thumb"
+name = "tfunc_8114b30"
+
+[[extra_func]]
+addr = 0x08114B4C
+mode = "thumb"
+name = "tfunc_8114b4c"
+
+[[extra_func]]
+addr = 0x08114C1C
+mode = "thumb"
+name = "tfunc_8114c1c"
+
+[[extra_func]]
+addr = 0x08115048
+mode = "thumb"
+name = "tfunc_8115048"
+
+[[extra_func]]
+addr = 0x081151E4
+mode = "thumb"
+name = "tfunc_81151e4"
+
+[[extra_func]]
+addr = 0x081152FC
+mode = "thumb"
+name = "tfunc_81152fc"
+
+[[extra_func]]
+addr = 0x08115440
+mode = "thumb"
+name = "tfunc_8115440"
+
+[[extra_func]]
+addr = 0x08116488
+mode = "thumb"
+name = "tfunc_8116488"
+
+[[extra_func]]
+addr = 0x081165CC
+mode = "thumb"
+name = "tfunc_81165cc"
+
+[[extra_func]]
+addr = 0x08116620
+mode = "thumb"
+name = "tfunc_8116620"
+
+[[extra_func]]
+addr = 0x08116654
+mode = "thumb"
+name = "tfunc_8116654"
+
+[[extra_func]]
+addr = 0x08116680
+mode = "thumb"
+name = "tfunc_8116680"
+
+[[extra_func]]
+addr = 0x081166AC
+mode = "thumb"
+name = "tfunc_81166ac"
+
+[[extra_func]]
+addr = 0x08116728
+mode = "thumb"
+name = "tfunc_8116728"
+
+[[extra_func]]
+addr = 0x08116868
+mode = "thumb"
+name = "tfunc_8116868"
+
+[[extra_func]]
+addr = 0x08116978
+mode = "thumb"
+name = "tfunc_8116978"
+
+[[extra_func]]
+addr = 0x081169D4
+mode = "thumb"
+name = "tfunc_81169d4"
+
+[[extra_func]]
+addr = 0x08116A0C
+mode = "thumb"
+name = "tfunc_8116a0c"
+
+[[extra_func]]
+addr = 0x08116A2C
+mode = "thumb"
+name = "tfunc_8116a2c"
+
+[[extra_func]]
+addr = 0x08116B48
+mode = "thumb"
+name = "tfunc_8116b48"
+
+[[extra_func]]
+addr = 0x08116CF4
+mode = "thumb"
+name = "tfunc_8116cf4"
+
+[[extra_func]]
+addr = 0x08116D98
+mode = "thumb"
+name = "tfunc_8116d98"
+
+[[extra_func]]
+addr = 0x08116E84
+mode = "thumb"
+name = "tfunc_8116e84"
+
+[[extra_func]]
+addr = 0x08117270
+mode = "thumb"
+name = "tfunc_8117270"
+
+[[extra_func]]
+addr = 0x08117778
+mode = "thumb"
+name = "tfunc_8117778"
+
+[[extra_func]]
+addr = 0x0811795C
+mode = "thumb"
+name = "tfunc_811795c"
+
+[[extra_func]]
+addr = 0x08117B34
+mode = "thumb"
+name = "tfunc_8117b34"
+
+[[extra_func]]
+addr = 0x08117BAC
+mode = "thumb"
+name = "tfunc_8117bac"
+
+[[extra_func]]
+addr = 0x08117C50
+mode = "thumb"
+name = "tfunc_8117c50"
+
+[[extra_func]]
+addr = 0x08117C9C
+mode = "thumb"
+name = "tfunc_8117c9c"
+
+[[extra_func]]
+addr = 0x08117D78
+mode = "thumb"
+name = "tfunc_8117d78"
+
+[[extra_func]]
+addr = 0x08117EE0
+mode = "thumb"
+name = "tfunc_8117ee0"
+
+[[extra_func]]
+addr = 0x0811625A
+mode = "thumb"
+name = "tfunc_0811625a"
+note = "spin site"
+
+[[extra_func]]
+addr = 0x08115484
+mode = "thumb"
+name = "tfunc_08115484"
+note = "spin stop_pc"
+
+# interior of iwram_blob_2034 (0x03002034<-0x08000534 size 0x108)
+[[extra_func]]
+addr = 0x08018080
+mode = "thumb"
+name = "tfunc_8018080"
+
+[[extra_func]]
+addr = 0x08018170
+mode = "thumb"
+name = "tfunc_8018170"
+
+[[extra_func]]
+addr = 0x08018218
+mode = "thumb"
+name = "tfunc_8018218"
+
+[[extra_func]]
+addr = 0x080183A4
+mode = "thumb"
+name = "tfunc_80183a4"
+
+[[extra_func]]
+addr = 0x080184F4
+mode = "thumb"
+name = "tfunc_80184f4"
+
+[[extra_func]]
+addr = 0x0801859C
+mode = "thumb"
+name = "tfunc_801859c"
+
+[[extra_func]]
+addr = 0x08018818
+mode = "thumb"
+name = "tfunc_8018818"
+
+[[extra_func]]
+addr = 0x08018920
+mode = "thumb"
+name = "tfunc_8018920"
+
+[[extra_func]]
+addr = 0x080189C4
+mode = "thumb"
+name = "tfunc_80189c4"
+
+[[extra_func]]
+addr = 0x08018A68
+mode = "thumb"
+name = "tfunc_8018a68"
+
+[[extra_func]]
+addr = 0x08018AEC
+mode = "thumb"
+name = "tfunc_8018aec"
+
+[[extra_func]]
+addr = 0x08018B78
+mode = "thumb"
+name = "tfunc_8018b78"
+
+[[extra_func]]
+addr = 0x08018BC0
+mode = "thumb"
+name = "tfunc_8018bc0"
+
+[[extra_func]]
+addr = 0x08018C68
+mode = "thumb"
+name = "tfunc_8018c68"
+
+[[extra_func]]
+addr = 0x08018CEC
+mode = "thumb"
+name = "tfunc_8018cec"
+
+[[extra_func]]
+addr = 0x08018D9C
+mode = "thumb"
+name = "tfunc_8018d9c"
+
+[[extra_func]]
+addr = 0x08018DA8
+mode = "thumb"
+name = "tfunc_8018da8"
+
+[[extra_func]]
+addr = 0x08018DB4
+mode = "thumb"
+name = "tfunc_8018db4"
+
+[[extra_func]]
+addr = 0x08018DEC
+mode = "thumb"
+name = "tfunc_8018dec"
+
+[[extra_func]]
+addr = 0x08018E24
+mode = "thumb"
+name = "tfunc_8018e24"
+
+[[extra_func]]
+addr = 0x08018E88
+mode = "thumb"
+name = "tfunc_8018e88"
+
+[[extra_func]]
+addr = 0x08018FC4
+mode = "thumb"
+name = "tfunc_8018fc4"
+
+[[extra_func]]
+addr = 0x0801E150
+mode = "thumb"
+name = "tfunc_801e150"
+
+[[extra_func]]
+addr = 0x0801E3EC
+mode = "thumb"
+name = "tfunc_801e3ec"
+
+[[extra_func]]
+addr = 0x0801E68C
+mode = "thumb"
+name = "tfunc_801e68c"
+
+[[extra_func]]
+addr = 0x0801E80C
+mode = "thumb"
+name = "tfunc_801e80c"
+
+[[extra_func]]
+addr = 0x0801EEBC
+mode = "thumb"
+name = "tfunc_801eebc"
+
+[[extra_func]]
+addr = 0x0801F370
+mode = "thumb"
+name = "tfunc_801f370"
+
+[[extra_func]]
+addr = 0x0801F7D0
+mode = "thumb"
+name = "tfunc_801f7d0"
+
+[[extra_func]]
+addr = 0x0801FBAC
+mode = "thumb"
+name = "tfunc_801fbac"
+
+[[extra_func]]
+addr = 0x0801FFA8
+mode = "thumb"
+name = "tfunc_801ffa8"
+
+[[extra_func]]
+addr = 0x0802039C
+mode = "thumb"
+name = "tfunc_802039c"
+
+[[extra_func]]
+addr = 0x08020784
+mode = "thumb"
+name = "tfunc_8020784"
+
+[[extra_func]]
+addr = 0x080207A8
+mode = "thumb"
+name = "tfunc_80207a8"
+
+[[extra_func]]
+addr = 0x080207E8
+mode = "thumb"
+name = "tfunc_80207e8"
+
+[[extra_func]]
+addr = 0x0802083C
+mode = "thumb"
+name = "tfunc_802083c"
+
+[[extra_func]]
+addr = 0x080208F4
+mode = "thumb"
+name = "tfunc_80208f4"
+
+[[extra_func]]
+addr = 0x08020994
+mode = "thumb"
+name = "tfunc_8020994"
+
+[[extra_func]]
+addr = 0x08020A78
+mode = "thumb"
+name = "tfunc_8020a78"
+
+[[extra_func]]
+addr = 0x08020CBC
+mode = "thumb"
+name = "tfunc_8020cbc"
+
+[[extra_func]]
+addr = 0x08020D40
+mode = "thumb"
+name = "tfunc_8020d40"
+
+[[extra_func]]
+addr = 0x08020DD0
+mode = "thumb"
+name = "tfunc_8020dd0"
+
+[[extra_func]]
+addr = 0x08018BA6
+mode = "thumb"
+name = "tfunc_08018ba6"
+note = "spin site"
+
+
+# ---- New Game load path 0x08022xxx ----
+
+[[extra_func]]
+addr = 0x08022D3E
+mode = "thumb"
+name = "tfunc_08022d3e"
+note = "New Game load spin"
+
+
+# ---- 0x08057xxx New Game / scene load ----
+
+[[extra_func]]
+addr = 0x080572CC
+mode = "thumb"
+name = "tfunc_80572cc"
+
+[[extra_func]]
+addr = 0x0805737C
+mode = "thumb"
+name = "tfunc_805737c"
+
+[[extra_func]]
+addr = 0x08057458
+mode = "thumb"
+name = "tfunc_8057458"
+
+[[extra_func]]
+addr = 0x08057484
+mode = "thumb"
+name = "tfunc_8057484"
+
+[[extra_func]]
+addr = 0x080574B4
+mode = "thumb"
+name = "tfunc_80574b4"
+
+[[extra_func]]
+addr = 0x080574FC
+mode = "thumb"
+name = "tfunc_80574fc"
+
+[[extra_func]]
+addr = 0x08057568
+mode = "thumb"
+name = "tfunc_8057568"
+
+[[extra_func]]
+addr = 0x080575C8
+mode = "thumb"
+name = "tfunc_80575c8"
+
+[[extra_func]]
+addr = 0x08057B58
+mode = "thumb"
+name = "tfunc_8057b58"
+
+[[extra_func]]
+addr = 0x08057BE4
+mode = "thumb"
+name = "tfunc_8057be4"
+
+[[extra_func]]
+addr = 0x08057C9C
+mode = "thumb"
+name = "tfunc_8057c9c"
+
+[[extra_func]]
+addr = 0x08057D2C
+mode = "thumb"
+name = "tfunc_8057d2c"
+
+[[extra_func]]
+addr = 0x08057F60
+mode = "thumb"
+name = "tfunc_8057f60"
+
+[[extra_func]]
+addr = 0x08057FCC
+mode = "thumb"
+name = "tfunc_8057fcc"
+
+[[extra_func]]
+addr = 0x08057E42
+mode = "thumb"
+name = "tfunc_08057e42"
+note = "New Game spin"
+
+
+# ---- 0x080598-0x0805A8 scene load ----
+
+[[extra_func]]
+addr = 0x0805980C
+mode = "thumb"
+name = "tfunc_805980c"
+
+[[extra_func]]
+addr = 0x08059924
+mode = "thumb"
+name = "tfunc_8059924"
+
+[[extra_func]]
+addr = 0x08059A8C
+mode = "thumb"
+name = "tfunc_8059a8c"
+
+[[extra_func]]
+addr = 0x08059AF4
+mode = "thumb"
+name = "tfunc_8059af4"
+
+[[extra_func]]
+addr = 0x08059D04
+mode = "thumb"
+name = "tfunc_8059d04"
+
+[[extra_func]]
+addr = 0x08059D8C
+mode = "thumb"
+name = "tfunc_8059d8c"
+
+[[extra_func]]
+addr = 0x08059DDC
+mode = "thumb"
+name = "tfunc_8059ddc"
+
+[[extra_func]]
+addr = 0x08059E5C
+mode = "thumb"
+name = "tfunc_8059e5c"
+
+[[extra_func]]
+addr = 0x08059EC8
+mode = "thumb"
+name = "tfunc_8059ec8"
+
+[[extra_func]]
+addr = 0x08059F00
+mode = "thumb"
+name = "tfunc_8059f00"
+
+[[extra_func]]
+addr = 0x08059F80
+mode = "thumb"
+name = "tfunc_8059f80"
+
+[[extra_func]]
+addr = 0x08059FE4
+mode = "thumb"
+name = "tfunc_8059fe4"
+
+[[extra_func]]
+addr = 0x0805A00C
+mode = "thumb"
+name = "tfunc_805a00c"
+
+[[extra_func]]
+addr = 0x0805A064
+mode = "thumb"
+name = "tfunc_805a064"
+
+[[extra_func]]
+addr = 0x0805A0EC
+mode = "thumb"
+name = "tfunc_805a0ec"
+
+[[extra_func]]
+addr = 0x0805A118
+mode = "thumb"
+name = "tfunc_805a118"
+
+[[extra_func]]
+addr = 0x0805A188
+mode = "thumb"
+name = "tfunc_805a188"
+
+[[extra_func]]
+addr = 0x0805A1A8
+mode = "thumb"
+name = "tfunc_805a1a8"
+
+[[extra_func]]
+addr = 0x0805A1E4
+mode = "thumb"
+name = "tfunc_805a1e4"
+
+[[extra_func]]
+addr = 0x0805A20C
+mode = "thumb"
+name = "tfunc_805a20c"
+
+[[extra_func]]
+addr = 0x0805A230
+mode = "thumb"
+name = "tfunc_805a230"
+
+[[extra_func]]
+addr = 0x0805A438
+mode = "thumb"
+name = "tfunc_805a438"
+
+[[extra_func]]
+addr = 0x0805A618
+mode = "thumb"
+name = "tfunc_805a618"
+
+[[extra_func]]
+addr = 0x0805A6EC
+mode = "thumb"
+name = "tfunc_805a6ec"
+
+[[extra_func]]
+addr = 0x0805A7C0
+mode = "thumb"
+name = "tfunc_805a7c0"
+
+[[extra_func]]
+addr = 0x0805A04A
+mode = "thumb"
+name = "tfunc_0805a04a"
+note = "scene load spin"
+
+# interior of iwram_blob_2034
+[[extra_func]]
+addr = 0x03001F14
+mode = "arm"
+name = "iwram_1f14"
+note = "spin; interior of iwram_blob_1edc"
+[[extra_func]]
+addr = 0x03001F30
+mode = "arm"
+name = "iwram_1f30"
+note = "spin; interior of iwram_blob_1edc"
+
+[[extra_func]]
+addr = 0x03001F58
+mode = "arm"
+name = "iwram_1f58"
+note = "ARM prologue in iwram_blob_1edc"
+
+# ---- 0x080EFxxx opening load ----
+
+[[extra_func]]
+addr = 0x080EF0B0
+mode = "thumb"
+name = "tfunc_80ef0b0"
+
+[[extra_func]]
+addr = 0x080EF220
+mode = "thumb"
+name = "tfunc_80ef220"
+
+[[extra_func]]
+addr = 0x080EF27C
+mode = "thumb"
+name = "tfunc_80ef27c"
+
+[[extra_func]]
+addr = 0x080EF2EC
+mode = "thumb"
+name = "tfunc_80ef2ec"
+
+[[extra_func]]
+addr = 0x080EF34C
+mode = "thumb"
+name = "tfunc_80ef34c"
+
+[[extra_func]]
+addr = 0x080EF3FC
+mode = "thumb"
+name = "tfunc_80ef3fc"
+
+[[extra_func]]
+addr = 0x080EF500
+mode = "thumb"
+name = "tfunc_80ef500"
+
+[[extra_func]]
+addr = 0x080EF618
+mode = "thumb"
+name = "tfunc_80ef618"
+
+[[extra_func]]
+addr = 0x080EF70C
+mode = "thumb"
+name = "tfunc_80ef70c"
+
+[[extra_func]]
+addr = 0x080EF79C
+mode = "thumb"
+name = "tfunc_80ef79c"
+
+[[extra_func]]
+addr = 0x080EF874
+mode = "thumb"
+name = "tfunc_80ef874"
+
+[[extra_func]]
+addr = 0x080EFA14
+mode = "thumb"
+name = "tfunc_80efa14"
+
+[[extra_func]]
+addr = 0x080EFB18
+mode = "thumb"
+name = "tfunc_80efb18"
+
+[[extra_func]]
+addr = 0x080EFC08
+mode = "thumb"
+name = "tfunc_80efc08"
+
+[[extra_func]]
+addr = 0x080EFE7C
+mode = "thumb"
+name = "tfunc_80efe7c"
+
+[[extra_func]]
+addr = 0x080F0000
+mode = "thumb"
+name = "tfunc_80f0000"
+
+[[extra_func]]
+addr = 0x080F0184
+mode = "thumb"
+name = "tfunc_80f0184"
+
+[[extra_func]]
+addr = 0x080F01D4
+mode = "thumb"
+name = "tfunc_80f01d4"
+
+[[extra_func]]
+addr = 0x080F0218
+mode = "thumb"
+name = "tfunc_80f0218"
+
+[[extra_func]]
+addr = 0x080F028C
+mode = "thumb"
+name = "tfunc_80f028c"
+
+[[extra_func]]
+addr = 0x080F032C
+mode = "thumb"
+name = "tfunc_80f032c"
+
+[[extra_func]]
+addr = 0x080F034C
+mode = "thumb"
+name = "tfunc_80f034c"
+
+[[extra_func]]
+addr = 0x080F03C8
+mode = "thumb"
+name = "tfunc_80f03c8"
+
+[[extra_func]]
+addr = 0x080F0420
+mode = "thumb"
+name = "tfunc_80f0420"
+
+[[extra_func]]
+addr = 0x080F048C
+mode = "thumb"
+name = "tfunc_80f048c"
+
+[[extra_func]]
+addr = 0x080F04F8
+mode = "thumb"
+name = "tfunc_80f04f8"
+
+[[extra_func]]
+addr = 0x080F0540
+mode = "thumb"
+name = "tfunc_80f0540"
+
+[[extra_func]]
+addr = 0x080F056C
+mode = "thumb"
+name = "tfunc_80f056c"
+
+[[extra_func]]
+addr = 0x080F05DC
+mode = "thumb"
+name = "tfunc_80f05dc"
+
+[[extra_func]]
+addr = 0x080F0618
+mode = "thumb"
+name = "tfunc_80f0618"
+
+[[extra_func]]
+addr = 0x080F0678
+mode = "thumb"
+name = "tfunc_80f0678"
+
+[[extra_func]]
+addr = 0x080F06EC
+mode = "thumb"
+name = "tfunc_80f06ec"
+
+[[extra_func]]
+addr = 0x080F0704
+mode = "thumb"
+name = "tfunc_80f0704"
+
+[[extra_func]]
+addr = 0x080F0724
+mode = "thumb"
+name = "tfunc_80f0724"
+
+[[extra_func]]
+addr = 0x080F0744
+mode = "thumb"
+name = "tfunc_80f0744"
+
+[[extra_func]]
+addr = 0x080F0780
+mode = "thumb"
+name = "tfunc_80f0780"
+
+[[extra_func]]
+addr = 0x080F0794
+mode = "thumb"
+name = "tfunc_80f0794"
+
+[[extra_func]]
+addr = 0x080EFB5C
+mode = "thumb"
+name = "tfunc_080efb5c"
+note = "opening load spin"
+
+[[extra_func]]
+addr = 0x08022CE0
+mode = "thumb"
+name = "tfunc_08022ce0"
+note = "opening load spin; near 08022d3e"
+
+# ---- 0x0803Fxxx opening ----
+
+[[extra_func]]
+addr = 0x0803F4FC
+mode = "thumb"
+name = "tfunc_803f4fc"
+
+[[extra_func]]
+addr = 0x0803F92C
+mode = "thumb"
+name = "tfunc_803f92c"
+
+[[extra_func]]
+addr = 0x0803FBA4
+mode = "thumb"
+name = "tfunc_803fba4"
+
+[[extra_func]]
+addr = 0x0803FDBC
+mode = "thumb"
+name = "tfunc_803fdbc"
+
+[[extra_func]]
+addr = 0x0803FE6C
+mode = "thumb"
+name = "tfunc_803fe6c"
+
+[[extra_func]]
+addr = 0x0803FE80
+mode = "thumb"
+name = "tfunc_803fe80"
+
+[[extra_func]]
+addr = 0x0803FE9C
+mode = "thumb"
+name = "tfunc_803fe9c"
+
+[[extra_func]]
+addr = 0x0803FEB8
+mode = "thumb"
+name = "tfunc_803feb8"
+
+[[extra_func]]
+addr = 0x0803F758
+mode = "thumb"
+name = "tfunc_0803f758"
+note = "opening spin"
+
+[[extra_func]]
+addr = 0x0803F700
+mode = "thumb"
+name = "tfunc_0803f700"
+note = "opening spin"
+
+[[extra_func]]
+addr = 0x0803F748
+mode = "thumb"
+name = "tfunc_0803f748"
+note = "opening spin"
+
+
+# ---- 0x08026xxx dialogue/script ----
+
+[[extra_func]]
+addr = 0x080261C0
+mode = "thumb"
+name = "tfunc_80261c0"
+
+[[extra_func]]
+addr = 0x080262CC
+mode = "thumb"
+name = "tfunc_80262cc"
+
+[[extra_func]]
+addr = 0x0802641C
+mode = "thumb"
+name = "tfunc_802641c"
+
+[[extra_func]]
+addr = 0x080264F4
+mode = "thumb"
+name = "tfunc_80264f4"
+
+[[extra_func]]
+addr = 0x080265EC
+mode = "thumb"
+name = "tfunc_80265ec"
+
+[[extra_func]]
+addr = 0x080267C0
+mode = "thumb"
+name = "tfunc_80267c0"
+
+[[extra_func]]
+addr = 0x08026C78
+mode = "thumb"
+name = "tfunc_8026c78"
+
+[[extra_func]]
+addr = 0x08026E94
+mode = "thumb"
+name = "tfunc_8026e94"
+
+[[extra_func]]
+addr = 0x08026896
+mode = "thumb"
+name = "tfunc_08026896"
+note = "dialogue/script spin"
+
+
+# ---- 0x08040xxx opening ----
+
+[[extra_func]]
+addr = 0x08040020
+mode = "thumb"
+name = "tfunc_8040020"
+
+[[extra_func]]
+addr = 0x080400B0
+mode = "thumb"
+name = "tfunc_80400b0"
+
+[[extra_func]]
+addr = 0x080401F0
+mode = "thumb"
+name = "tfunc_80401f0"
+
+[[extra_func]]
+addr = 0x080402C4
+mode = "thumb"
+name = "tfunc_80402c4"
+
+[[extra_func]]
+addr = 0x0804034C
+mode = "thumb"
+name = "tfunc_804034c"
+
+[[extra_func]]
+addr = 0x080403C4
+mode = "thumb"
+name = "tfunc_80403c4"
+
+[[extra_func]]
+addr = 0x08040790
+mode = "thumb"
+name = "tfunc_8040790"
+
+[[extra_func]]
+addr = 0x08040804
+mode = "thumb"
+name = "tfunc_8040804"
+
+[[extra_func]]
+addr = 0x080409F4
+mode = "thumb"
+name = "tfunc_80409f4"
+
+[[extra_func]]
+addr = 0x08040AE0
+mode = "thumb"
+name = "tfunc_8040ae0"
+
+[[extra_func]]
+addr = 0x08040C50
+mode = "thumb"
+name = "tfunc_8040c50"
+
+[[extra_func]]
+addr = 0x08040CF4
+mode = "thumb"
+name = "tfunc_8040cf4"
+
+[[extra_func]]
+addr = 0x08040FA0
+mode = "thumb"
+name = "tfunc_8040fa0"
+
+[[extra_func]]
+addr = 0x0804003E
+mode = "thumb"
+name = "tfunc_0804003e"
+note = "opening spin"
+
+
+# ---- 0x0803E8-3F8 opening ----
+
+[[extra_func]]
+addr = 0x0803EA00
+mode = "thumb"
+name = "tfunc_803ea00"
+
+[[extra_func]]
+addr = 0x0803F45E
+mode = "thumb"
+name = "tfunc_0803f45e"
+note = "opening spin"
+
+
+# ---- 0x080238-250 opening ----
+
+[[extra_func]]
+addr = 0x08023DD4
+mode = "thumb"
+name = "tfunc_8023dd4"
+
+[[extra_func]]
+addr = 0x08023FAA
+mode = "thumb"
+name = "tfunc_08023faa"
+note = "opening spin"
+
+
+# ---- 0x080418-428 opening ----
+
+[[extra_func]]
+addr = 0x080418E8
+mode = "thumb"
+name = "tfunc_80418e8"
+
+[[extra_func]]
+addr = 0x08041A2C
+mode = "thumb"
+name = "tfunc_8041a2c"
+
+[[extra_func]]
+addr = 0x08041FFC
+mode = "thumb"
+name = "tfunc_8041ffc"
+
+[[extra_func]]
+addr = 0x08042030
+mode = "thumb"
+name = "tfunc_08042030"
+note = "opening spin"
+
+
+# ---- 0x08044xxx opening ----
+
+[[extra_func]]
+addr = 0x08044630
+mode = "thumb"
+name = "tfunc_8044630"
+
+[[extra_func]]
+addr = 0x08044674
+mode = "thumb"
+name = "tfunc_08044674"
+note = "opening spin"
+
+
+# ---- 0x08045-0x0804B opening cutscene & misses ----
+[[extra_func]]
+addr = 0x08041368
+mode = "thumb"
+name = "tfunc_8041368"
+note = "opening script"
+
+[[extra_func]]
+addr = 0x080415A0
+mode = "thumb"
+name = "tfunc_80415a0"
+note = "opening script"
+
+[[extra_func]]
+addr = 0x0804173C
+mode = "thumb"
+name = "tfunc_804173c"
+note = "opening script"
+
+[[extra_func]]
+addr = 0x080457E8
+mode = "thumb"
+name = "tfunc_80457e8"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x080458B0
+mode = "thumb"
+name = "tfunc_80458b0"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x080459C0
+mode = "thumb"
+name = "tfunc_80459c0"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08045A94
+mode = "thumb"
+name = "tfunc_8045a94"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08045F04
+mode = "thumb"
+name = "tfunc_8045f04"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x080461B4
+mode = "thumb"
+name = "tfunc_80461b4"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x080465D8
+mode = "thumb"
+name = "tfunc_80465d8"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08046980
+mode = "thumb"
+name = "tfunc_8046980"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08046A10
+mode = "thumb"
+name = "tfunc_8046a10"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08046A90
+mode = "thumb"
+name = "tfunc_8046a90"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08046B30
+mode = "thumb"
+name = "tfunc_8046b30"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08046BC8
+mode = "thumb"
+name = "tfunc_8046bc8"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08046C78
+mode = "thumb"
+name = "tfunc_8046c78"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08046D18
+mode = "thumb"
+name = "tfunc_8046d18"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08047154
+mode = "thumb"
+name = "tfunc_8047154"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08047258
+mode = "thumb"
+name = "tfunc_8047258"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x080472D0
+mode = "thumb"
+name = "tfunc_80472d0"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08047364
+mode = "thumb"
+name = "tfunc_8047364"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x080473DC
+mode = "thumb"
+name = "tfunc_80473dc"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x080474D0
+mode = "thumb"
+name = "tfunc_80474d0"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x080475A0
+mode = "thumb"
+name = "tfunc_80475a0"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x0804761C
+mode = "thumb"
+name = "tfunc_804761c"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x080477A8
+mode = "thumb"
+name = "tfunc_80477a8"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08047804
+mode = "thumb"
+name = "tfunc_8047804"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08047858
+mode = "thumb"
+name = "tfunc_8047858"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x080478AC
+mode = "thumb"
+name = "tfunc_80478ac"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08047928
+mode = "thumb"
+name = "tfunc_8047928"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x080479BC
+mode = "thumb"
+name = "tfunc_80479bc"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x080479DC
+mode = "thumb"
+name = "tfunc_80479dc"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x080479FC
+mode = "thumb"
+name = "tfunc_80479fc"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08047A1C
+mode = "thumb"
+name = "tfunc_8047a1c"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08047A3C
+mode = "thumb"
+name = "tfunc_8047a3c"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08047A5C
+mode = "thumb"
+name = "tfunc_8047a5c"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08047B08
+mode = "thumb"
+name = "tfunc_8047b08"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08047B5C
+mode = "thumb"
+name = "tfunc_8047b5c"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08047B78
+mode = "thumb"
+name = "tfunc_8047b78"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08047B98
+mode = "thumb"
+name = "tfunc_8047b98"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08047C18
+mode = "thumb"
+name = "tfunc_8047c18"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08047C68
+mode = "thumb"
+name = "tfunc_8047c68"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08047D44
+mode = "thumb"
+name = "tfunc_8047d44"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08047D64
+mode = "thumb"
+name = "tfunc_8047d64"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08047D84
+mode = "thumb"
+name = "tfunc_8047d84"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08047DC8
+mode = "thumb"
+name = "tfunc_8047dc8"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08047E50
+mode = "thumb"
+name = "tfunc_8047e50"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08047E7C
+mode = "thumb"
+name = "tfunc_8047e7c"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08047EFC
+mode = "thumb"
+name = "tfunc_8047efc"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08047F60
+mode = "thumb"
+name = "tfunc_8047f60"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08047FDC
+mode = "thumb"
+name = "tfunc_8047fdc"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08048040
+mode = "thumb"
+name = "tfunc_8048040"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08048064
+mode = "thumb"
+name = "tfunc_8048064"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08048174
+mode = "thumb"
+name = "tfunc_8048174"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x080482E0
+mode = "thumb"
+name = "tfunc_80482e0"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08048438
+mode = "thumb"
+name = "tfunc_8048438"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x0804857C
+mode = "thumb"
+name = "tfunc_804857c"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08048704
+mode = "thumb"
+name = "tfunc_8048704"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x080487F0
+mode = "thumb"
+name = "tfunc_80487f0"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08049000
+mode = "thumb"
+name = "tfunc_8049000"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x080490CC
+mode = "thumb"
+name = "tfunc_80490cc"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08049224
+mode = "thumb"
+name = "tfunc_8049224"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x080492DC
+mode = "thumb"
+name = "tfunc_80492dc"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08049370
+mode = "thumb"
+name = "tfunc_8049370"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08049430
+mode = "thumb"
+name = "tfunc_8049430"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x080494D4
+mode = "thumb"
+name = "tfunc_80494d4"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x0804955C
+mode = "thumb"
+name = "tfunc_804955c"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x080496B4
+mode = "thumb"
+name = "tfunc_80496b4"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x080497A8
+mode = "thumb"
+name = "tfunc_80497a8"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x080498B0
+mode = "thumb"
+name = "tfunc_80498b0"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x080499B8
+mode = "thumb"
+name = "tfunc_80499b8"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08049AB4
+mode = "thumb"
+name = "tfunc_8049ab4"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08049BD8
+mode = "thumb"
+name = "tfunc_8049bd8"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08049C38
+mode = "thumb"
+name = "tfunc_8049c38"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08049FF4
+mode = "thumb"
+name = "tfunc_8049ff4"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x0804A124
+mode = "thumb"
+name = "tfunc_804a124"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x0804A4C8
+mode = "thumb"
+name = "tfunc_804a4c8"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x0804A5D4
+mode = "thumb"
+name = "tfunc_804a5d4"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x0804B028
+mode = "thumb"
+name = "tfunc_804b028"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x0804B25C
+mode = "thumb"
+name = "tfunc_804b25c"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x0804B360
+mode = "thumb"
+name = "tfunc_804b360"
+note = "opening cutscene prologue"
+
+[[extra_func]]
+addr = 0x08048572
+mode = "thumb"
+name = "tfunc_8048572"
+note = "missed target / shared epilogue"
+

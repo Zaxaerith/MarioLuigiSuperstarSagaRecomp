@@ -1,0 +1,17 @@
+# gbarecomp-keyinput-v1
+# frame,keyinput_active_low
+# hold START from 500-560 (bit3)
+500,0x03F7
+560,0x03FF
+# A at 700
+700,0x03FD
+720,0x03FF
+# START again at 900-960
+900,0x03F7
+960,0x03FF
+# A at 1100
+1100,0x03FD
+1120,0x03FF
+# A at 1300
+1300,0x03FD
+1320,0x03FF

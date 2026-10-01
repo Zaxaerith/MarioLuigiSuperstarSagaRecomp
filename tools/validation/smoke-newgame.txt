@@ -1,0 +1,14 @@
+# gbarecomp-keyinput-v1
+# frame,keyinput_active_low
+# settle at game select, then A to start New Game
+1600,0x03FD
+1620,0x03FF
+1700,0x03FD
+1720,0x03FF
+# A again for any dialog
+2000,0x03FD
+2020,0x03FF
+2200,0x03FD
+2220,0x03FF
+2500,0x03FD
+2520,0x03FF

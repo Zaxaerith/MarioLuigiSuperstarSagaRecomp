@@ -1,0 +1,195 @@
+[[extra_func]]
+addr = 0x08122098
+mode = "thumb"
+name = "tfunc_8122098"
+
+[[extra_func]]
+addr = 0x08122198
+mode = "thumb"
+name = "tfunc_8122198"
+
+[[extra_func]]
+addr = 0x08122248
+mode = "thumb"
+name = "tfunc_8122248"
+
+[[extra_func]]
+addr = 0x08122330
+mode = "thumb"
+name = "tfunc_8122330"
+
+[[extra_func]]
+addr = 0x08122618
+mode = "thumb"
+name = "tfunc_8122618"
+
+[[extra_func]]
+addr = 0x0812290C
+mode = "thumb"
+name = "tfunc_812290c"
+
+[[extra_func]]
+addr = 0x081229F0
+mode = "thumb"
+name = "tfunc_81229f0"
+
+[[extra_func]]
+addr = 0x08122A20
+mode = "thumb"
+name = "tfunc_8122a20"
+
+[[extra_func]]
+addr = 0x08122AFC
+mode = "thumb"
+name = "tfunc_8122afc"
+
+[[extra_func]]
+addr = 0x08122BA0
+mode = "thumb"
+name = "tfunc_8122ba0"
+
+[[extra_func]]
+addr = 0x08122BFC
+mode = "thumb"
+name = "tfunc_8122bfc"
+
+[[extra_func]]
+addr = 0x08122E30
+mode = "thumb"
+name = "tfunc_8122e30"
+
+[[extra_func]]
+addr = 0x081230D0
+mode = "thumb"
+name = "tfunc_81230d0"
+
+[[extra_func]]
+addr = 0x081232C4
+mode = "thumb"
+name = "tfunc_81232c4"
+
+[[extra_func]]
+addr = 0x08123340
+mode = "thumb"
+name = "tfunc_8123340"
+
+[[extra_func]]
+addr = 0x0812335C
+mode = "thumb"
+name = "tfunc_812335c"
+
+[[extra_func]]
+addr = 0x081233B4
+mode = "thumb"
+name = "tfunc_81233b4"
+
+[[extra_func]]
+addr = 0x0812378C
+mode = "thumb"
+name = "tfunc_812378c"
+
+[[extra_func]]
+addr = 0x08123BA8
+mode = "thumb"
+name = "tfunc_8123ba8"
+
+[[extra_func]]
+addr = 0x08123DC4
+mode = "thumb"
+name = "tfunc_8123dc4"
+
+[[extra_func]]
+addr = 0x0812418C
+mode = "thumb"
+name = "tfunc_812418c"
+
+[[extra_func]]
+addr = 0x08124270
+mode = "thumb"
+name = "tfunc_8124270"
+
+[[extra_func]]
+addr = 0x0812454C
+mode = "thumb"
+name = "tfunc_812454c"
+
+[[extra_func]]
+addr = 0x08124740
+mode = "thumb"
+name = "tfunc_8124740"
+
+[[extra_func]]
+addr = 0x08124978
+mode = "thumb"
+name = "tfunc_8124978"
+
+[[extra_func]]
+addr = 0x08124C44
+mode = "thumb"
+name = "tfunc_8124c44"
+
+[[extra_func]]
+addr = 0x08124D84
+mode = "thumb"
+name = "tfunc_8124d84"
+
+[[extra_func]]
+addr = 0x08124E9C
+mode = "thumb"
+name = "tfunc_8124e9c"
+
+[[extra_func]]
+addr = 0x08125000
+mode = "thumb"
+name = "tfunc_8125000"
+
+[[extra_func]]
+addr = 0x081251F0
+mode = "thumb"
+name = "tfunc_81251f0"
+
+[[extra_func]]
+addr = 0x08125220
+mode = "thumb"
+name = "tfunc_8125220"
+
+[[extra_func]]
+addr = 0x0812525C
+mode = "thumb"
+name = "tfunc_812525c"
+
+[[extra_func]]
+addr = 0x081252BC
+mode = "thumb"
+name = "tfunc_81252bc"
+
+[[extra_func]]
+addr = 0x08125324
+mode = "thumb"
+name = "tfunc_8125324"
+
+[[extra_func]]
+addr = 0x0812538C
+mode = "thumb"
+name = "tfunc_812538c"
+
+[[extra_func]]
+addr = 0x08125464
+mode = "thumb"
+name = "tfunc_8125464"
+
+[[extra_func]]
+addr = 0x081254FC
+mode = "thumb"
+name = "tfunc_81254fc"
+
+[[extra_func]]
+addr = 0x08126520
+mode = "thumb"
+name = "tfunc_8126520"
+
+[[extra_func]]
+addr = 0x08126C3C
+mode = "thumb"
+name = "tfunc_8126c3c"
+

@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "game": {
+    "name": "Mario & Luigi: Superstar Saga",
+    "short_name": "mlss",
+    "region": "USA",
+    "game_code": "A88E",
+    "maker_code": "01",
+    "internal_title": "MARIO&LUIGIU",
+    "revision": 0
+  },
+  "rom": {
+    "file": "Mario Luigi - Superstar Saga (USA).gba",
+    "size_bytes": 16777216,
+    "size_hex": "0x01000000",
+    "md5": "4b1a5897d89d9e74ec7f630eefdfd435",
+    "sha1": "7c303cdde5061ee329296948060b875cb50ba410",
+    "sha256": "af9066e7eacdab919e92987db8856d038e4b75d4ed011259c893702085a886be",
+    "entry_word": "0xEA00002E",
+    "entry_branch_target": "0x080000C0",
+    "fixed_0x04": "0x51AEFF24",
+    "header_checksum_stored": "0x8D",
+    "header_checksum_computed": "0x89",
+    "header_checksum_note": "computed value differs from stored byte; SHA-1 matches the canonical USA Rev0 dump and jellees/mlss rom.sha1, so the image is the correct base ROM"
+  },
+  "bios": {
+    "file_hint": "gbarecomp-cli-windows-x86_64/gbabios/gba_bios.bin",
+    "size_bytes": 16384,
+    "sha1": "300c20df6731a33952ded8c436f7f186d25d3492"
+  },
+  "save_hardware": {
+    "status": "resolved-eeprom-pending-write-test",
+    "resolved_type": "eeprom",
+    "resolved_size": 8192,
+    "rom_signature": {
+      "found": "EEPROM_V124",
+      "file_offset": 2218912,
+      "hex_offset": "0x21DBA0",
+      "framework_detect_save_type": "EEPROM"
+    },
+    "runtime_banner": {
+      "log": "logs/boot-smoke-eeprom.log",
+      "line": "save=EEPROM signature=EEPROM_V",
+      "save_config": "source=game-config type=EEPROM size=8192 (detected=EEPROM signature=\"EEPROM_V\" @ 0x21DBA0)"
+    },
+    "decomp_evidence": {
+      "repo": "jellees/mlss",
+      "commit": "b03634c2c700a3ae78f39e576cc88a45c3a724fd",
+      "header": "include/gba/flash_internal.h",
+      "flash_rom_size_1m": 131072,
+      "chips": ["MX29L010", "LE26FV10N1TS"],
+      "note": "1 Mbit flash API exists in decomp headers but is NOT what this ROM image advertises; not used for game.toml"
+    },
+    "open_item": "in-game save -> exit -> relaunch -> load must pass before this is considered verified"
+  },
+  "decomp": {
+    "upstream": "https://github.com/jellees/mlss",
+    "local": "third_party/mlss",
+    "commit": "b03634c2c700a3ae78f39e576cc88a45c3a724fd",
+    "rom_sha1_expected": "7c303cdde5061ee329296948060b875cb50ba410",
+    "rom_sha1_matches_local": true
+  },
+  "measured_at": "2026-06-14T00:00:00Z"
+}
