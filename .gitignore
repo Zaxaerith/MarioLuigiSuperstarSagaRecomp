@@ -9,6 +9,8 @@ saves/
 *.sav
 *.sa1
 *.fla
+*.cfg
+*.ini
 
 # Build and generation outputs (ROM/BIOS-derived, local-only)
 build/
@@ -16,6 +18,7 @@ build-*/
 generated/
 recomp_cache/
 .deps/
+release-stage/
 *.lib
 *.a
 *.o

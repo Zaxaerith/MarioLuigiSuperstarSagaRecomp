@@ -107,12 +107,14 @@ if (-not $SkipBios -and -not $CartOnly) {
 
     # codegen_tail_macros.h is hand-written framework source the build force-includes.
     $tailCandidates = @(
-        (Join-Path (Split-Path -Parent $Root) 'gbarecomp-main\src\runtime\generated_bios\codegen_tail_macros.h'),
-        (Join-Path $Root 'reference\gbarecomp\src\runtime\generated_bios\codegen_tail_macros.h')
+        (Join-Path $Root 'gbarecomp\src\runtime\generated_bios\codegen_tail_macros.h'),
+        (Join-Path $Root 'reference\gbarecomp\src\runtime\generated_bios\codegen_tail_macros.h'),
+        (Join-Path (Split-Path -Parent $Root) 'gbarecomp-main\src\runtime\generated_bios\codegen_tail_macros.h')
     )
     $tail = $tailCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
     if (-not $tail) { Fail 'codegen_tail_macros.h not found in framework' }
     Copy-Item $tail (Join-Path $biosOut 'codegen_tail_macros.h') -Force
+    Copy-Item $tail (Join-Path $cartOut 'codegen_tail_macros.h') -Force
     Step "BIOS translation done"
 }
 
