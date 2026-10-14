@@ -180,6 +180,7 @@ The native executable supports direct command-line arguments for automated testi
   * [arm-recomp-core](https://github.com/mstan/arm-recomp-core) — MIT License
   * mGBA-derived BIOS HLE fallback source — MPL-2.0 (bundled in `licenses/mpl-source/`)
   * Fonts (*LatoLatin*, *OpenMoji*, *NotoSansSymbols2*) — OFL-1.1 / CC BY-SA 4.0 (see `licenses/`)
+  * MinGW-w64 / GCC Runtime (`libgcc`, `libstdc++`, `libwinpthread`) — GPLv3 with GCC Runtime Library Exception / MinGW terms
 * See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for full licensing information.
 
 ---

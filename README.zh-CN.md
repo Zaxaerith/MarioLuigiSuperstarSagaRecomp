@@ -179,6 +179,7 @@
   * [arm-recomp-core](https://github.com/mstan/arm-recomp-core) — MIT 许可证
   * mGBA 衍生的 BIOS HLE 源码 — MPL-2.0 许可证（打包于 `licenses/mpl-source/`）
   * 字体资产（*LatoLatin*, *OpenMoji*, *NotoSansSymbols2*）— OFL-1.1 / CC BY-SA 4.0（详见 `licenses/`）
+  * MinGW-w64 / GCC 运行库（`libgcc`, `libstdc++`, `libwinpthread`）— GPLv3 附带 GCC Runtime Library Exception / MinGW 许可条款
 * 详细第三方许可清单参见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 ---
