@@ -4,7 +4,7 @@
 
 A Windows x64 native recompilation integration for **Mario & Luigi: Superstar Saga (USA, Game Code: A88E, Revision 0)**, built using [GBARecomp](https://github.com/mstan/gbarecomp) and [recomp-ui](https://github.com/mstan/recomp-ui).
 
-> **v0.1.0-preview — Experimental Preview**  
+> **v0.1.1-preview — Experimental Preview**  
 > This unofficial, non-commercial project is not affiliated with, endorsed by, or associated with Nintendo or AlphaDream. Players must supply their own legally obtained GBA ROM and retail GBA BIOS. Full-game compatibility is not claimed.
 
 *Mario & Luigi: Superstar Saga* is AlphaDream and Nintendo's critically acclaimed comedic action RPG for the Game Boy Advance. This native Windows integration translates original ARM/Thumb code into native x64 instructions, preserving original timing, gameplay mechanics, graphics, audio, and cartridge save persistence while providing a modern desktop player launcher.
@@ -35,7 +35,7 @@ This preview focuses on a solid, playable native foundation. The following chapt
 
 No developer tools (CMake, Ninja, GCC, Python, or command-line shells) are required.
 
-1. **Download**: Grab `MarioLuigiSuperstarSagaRecomp-windows-x64-v0.1.0-preview.zip` from the project's Releases page.
+1. **Download**: Grab `MarioLuigiSuperstarSagaRecomp-windows-x64-v0.1.1-preview.zip` from the project's Releases page.
 2. **Extract**: Extract the entire archive into a writable folder on your computer. Ensure `MarioLuigiSuperstarSagaRecomp.exe`, the DLLs (`SDL2.dll`, `libgcc_s_seh-1.dll`, `libstdc++-6.dll`, `libwinpthread-1.dll`), `assets/`, and `licenses/` stay together.
 3. **Launch**: Double-click `MarioLuigiSuperstarSagaRecomp.exe`.
 4. **Setup in Launcher**:

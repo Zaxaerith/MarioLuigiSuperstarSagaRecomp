@@ -4,7 +4,7 @@
 
 基于 [GBARecomp](https://github.com/mstan/gbarecomp) 与 [recomp-ui](https://github.com/mstan/recomp-ui) 构建的《马力欧与路易吉RPG》（*Mario & Luigi: Superstar Saga*, USA, Game Code: A88E, Revision 0）原生 64 位 Windows 静态重编译移植版。
 
-> **v0.1.0-preview — Experimental Preview（实验性预览）**  
+> **v0.1.1-preview — Experimental Preview（实验性预览）**  
 > 本项目为非官方、非商业性质的研究与数字化保护项目，与任天堂（Nintendo）及 AlphaDream 无任何关联。玩家需自行提供合法获取的 GBA 原版 ROM 与官方 GBA BIOS 固件。本项目不声明完整游戏流程的百分之百全要素兼容。
 
 《马力欧与路易吉RPG》是 AlphaDream 与任天堂在 Game Boy Advance 平台上推出的经典动作 RPG 游戏。本 Windows 原生移植版将原始 ARM/Thumb 机器码静态翻译为原生 x64 机器指令，在完美保留原版战斗时机、动作指令判定、物理机制、图像音效与卡带存档特性的同时，提供开箱即用的现代化图形启动器（Launcher GUI）。
@@ -35,7 +35,7 @@
 
 **普通玩家无需安装任何开发工具（无需 CMake、Ninja、GCC 编译器、Python 或命令行环境）：**
 
-1. **下载解压**：前往仓库 Releases 页面下载 `MarioLuigiSuperstarSagaRecomp-windows-x64-v0.1.0-preview.zip`，并解压到电脑任意**可写目录**。确保主程序 `MarioLuigiSuperstarSagaRecomp.exe`、动态链接库（`SDL2.dll`、`libgcc_s_seh-1.dll`、`libstdc++-6.dll`、`libwinpthread-1.dll`）、`assets/` 资源目录及 `licenses/` 许可目录处于同一文件夹下。
+1. **下载解压**：前往仓库 Releases 页面下载 `MarioLuigiSuperstarSagaRecomp-windows-x64-v0.1.1-preview.zip`，并解压到电脑任意**可写目录**。确保主程序 `MarioLuigiSuperstarSagaRecomp.exe`、动态链接库（`SDL2.dll`、`libgcc_s_seh-1.dll`、`libstdc++-6.dll`、`libwinpthread-1.dll`）、`assets/` 资源目录及 `licenses/` 许可目录处于同一文件夹下。
 2. **启动程序**：双击运行 `MarioLuigiSuperstarSagaRecomp.exe`。
 3. **启动器配置**：
    * 点击 **Browse** 分别选择你拥有的美版 GBA ROM（`.gba`）和官方 GBA BIOS（`.bin`）。
